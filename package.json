@@ -1,0 +1,11 @@
+{
+    "name": "openfortakeout-api",
+    "version": "1.0.0",
+    "main": "index.js",
+    "author": "Joseph Pender",
+    "license": "MIT",
+    "private": true,
+    "scripts": {
+        "buildimage": "docker build -t openfortakeout/api -f ./scripts/docker/Dockerfile ."
+    }
+}

@@ -1,0 +1,9 @@
+/docker
+node_modules
+client/dist
+.env
+firebase_privatekey.json
+.idea/workspace.xml
+.idea/tasks.xml
+.DS_Store
+/build
