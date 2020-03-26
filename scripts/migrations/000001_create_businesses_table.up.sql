@@ -1,6 +1,7 @@
-CREATE TABLE IF NOT EXISTS public.restaurants (
+CREATE TABLE IF NOT EXISTS public.businesses (
     id serial PRIMARY KEY,
     name TEXT NOT NULL,
+    type TEXT NOT NULL,
     email TEXT NOT NULL,
     phone TEXT NOT NULL,
     details TEXT,
@@ -20,4 +21,4 @@ CREATE TABLE IF NOT EXISTS public.restaurants (
     deleted_at TIMESTAMP 
 );
 
-CREATE INDEX restaurants_gix ON public.restaurants USING GIST ( location );
+CREATE INDEX businesses_gix ON public.businesses USING GIST ( location );

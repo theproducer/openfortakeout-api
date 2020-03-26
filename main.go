@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -37,5 +38,6 @@ func main() {
 	}
 
 	address := fmt.Sprintf(":%s", os.Getenv("PORT"))
-	s.Run(address, os.Getenv("ORIGIN"))
+	origins := strings.Split(os.Getenv("ORIGIN"), ",")
+	s.Run(address, origins)
 }

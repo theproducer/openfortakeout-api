@@ -33,6 +33,8 @@ services:
       MIGRATIONS: file:///migrations
       GEOCODIO_APIKEY: ${GEOCODIO_APIKEY}
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL}
+      SLACK_TEAM_ID: ${SLACK_TEAM_ID}
+      SLACK_CHANNEL_ID: ${SLACK_CHANNEL_ID}
       SENTRY_DSN: ${SENTRY_DSN}
     ports:
       - ${API_PORT}

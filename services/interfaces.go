@@ -6,6 +6,7 @@ import (
 
 type RestaurantEntityInterface interface {
 	CreateRestaurant(newRestaurant models.Restaurant) (*uint, error)
+	ApproveRestaurant(restaurantID uint) (*models.Restaurant, error)
 	GetRestaurants(lat *float64, lng *float64) (*[]models.Restaurant, error)
 	GetRestaurant(id uint) (*models.Restaurant, error)
 }

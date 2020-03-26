@@ -20,6 +20,7 @@ type CommonModelTimestamps struct {
 type Restaurant struct {
 	CommonModelFields
 	Name        string   `db:"name" json:"name" validate:"required"`
+	Type        string   `db:"type" json:"type" validate:"required"`
 	Phone       string   `db:"phone" json:"phone" validate:"required,max=14"`
 	Details     string   `db:"details" json:"details"`
 	Hours       string   `db:"hours" json:"hours"`
@@ -34,11 +35,12 @@ type Restaurant struct {
 	Location    string   `db:"location" json:"-"`
 	HasGiftCard bool     `db:"giftcard" json:"giftcard"`
 	IsActive    bool     `db:"is_active" json:"active"`
-	LatLng      GeoPoint `json:"laglng"`
+	LatLng      GeoPoint `json:"latlng"`
 	CommonModelTimestamps
 }
 
 type RestaurantMsg struct {
+	Type string `json:"type"`
 	Text string `json:"text"`
 }
 

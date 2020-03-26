@@ -18,6 +18,7 @@ import (
 	"github.com/rs/cors"
 	"github.com/theproducer/openfortakeout_api/restaurants"
 	"github.com/theproducer/openfortakeout_api/services"
+	"github.com/theproducer/openfortakeout_api/slackadmin"
 )
 
 type Server struct {
@@ -55,6 +56,7 @@ func (s *Server) Initialize(user, password, dbName, host, port string) error {
 	}
 
 	restaurants.NewController(s.Router, re, geocoder)
+	slackadmin.NewController(s.Router, re)
 
 	return nil
 }
@@ -82,9 +84,9 @@ func (s *Server) RunMigrations(db *sql.DB, dbName string) error {
 	return nil
 }
 
-func (s *Server) Run(addr, origin string) {
+func (s *Server) Run(addr string, origins []string) {
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{origin},
+		AllowedOrigins: origins,
 		AllowedHeaders: []string{"X-Requested-With", "Content-Type", "Authorization"},
 		AllowedMethods: []string{"GET", "HEAD", "POST", "PUT", "OPTIONS", "DELETE"},
 		Debug:          true,
@@ -94,5 +96,6 @@ func (s *Server) Run(addr, origin string) {
 	loggedHandler := handlers.LoggingHandler(os.Stdout, serverHandler)
 
 	log.Printf("Starting server at %v\n", addr)
+	log.Printf("Allowed Origins: %v\n", origins)
 	log.Fatal(http.ListenAndServe(addr, loggedHandler))
 }
