@@ -101,13 +101,13 @@ func (e RestaurantEntity) GetRestaurants(lat *float64, lng *float64) (*[]models.
 
 	if *lat != 0.00 && *lng != 0.00 {
 		// default search within 30 mi
-		query := `SELECT *, ST_AsText(location) as location FROM businesses WHERE ST_DWithin(ST_POINT($1, $2)::geography, location, 48280.32) AND deleted_at IS null AND is_active IS TRUE`
+		query := `SELECT *, ST_AsText(location) as location FROM businesses WHERE ST_DWithin(ST_POINT($1, $2)::geography, location, 48280.32) AND deleted_at IS null AND is_active IS TRUE ORDER BY name ASC`
 		rows, err = e.DB.Queryx(query, lng, lat)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		query := `SELECT *, ST_AsText(location) as location FROM businesses WHERE deleted_at IS null AND is_active IS TRUE`
+		query := `SELECT *, ST_AsText(location) as location FROM businesses WHERE deleted_at IS null AND is_active IS TRUE ORDER BY name ASC`
 		rows, err = e.DB.Queryx(query)
 		if err != nil {
 			return nil, err
