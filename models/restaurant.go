@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -17,25 +18,59 @@ type CommonModelTimestamps struct {
 	DeletedAt *time.Time `db:"deleted_at" json:"deleted_at"`
 }
 
+type RestaurantTags []string
+
+func (t RestaurantTags) Value() (driver.Value, error) {
+	return fmt.Sprintf("{%s}", strings.Join(t, ",")), nil
+}
+
+func (t *RestaurantTags) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+	var psqlArrayStr string
+	switch src.(type) {
+	case string:
+		psqlArrayStr = src.(string)
+	case []byte:
+		psqlArrayStr = string(src.([]byte))
+	default:
+		return errors.New("Incompatible type for RestaurantTags")
+	}
+
+	psqlArrayStr = strings.TrimLeft(psqlArrayStr, "{")
+	psqlArrayStr = strings.TrimRight(psqlArrayStr, "}")
+
+	tags := strings.Split(psqlArrayStr, ",")
+
+	for index, tag := range tags {
+		tags[index] = strings.Trim(tag, "\"")
+	}
+
+	*t = tags
+	return nil
+}
+
 type Restaurant struct {
 	CommonModelFields
-	Name        string   `db:"name" json:"name" validate:"required"`
-	Type        string   `db:"type" json:"type" validate:"required"`
-	Phone       string   `db:"phone" json:"phone" validate:"required,max=14"`
-	Details     string   `db:"details" json:"details"`
-	Hours       string   `db:"hours" json:"hours"`
-	Email       string   `db:"email" json:"email" validate:"required,email"`
-	URL         string   `db:"url" json:"url" validate:"omitempty,url"`
-	Address     string   `db:"address" json:"address" validate:"required"`
-	Address2    string   `db:"address2" json:"address_2"`
-	City        string   `db:"city" json:"city" validate:"required"`
-	State       string   `db:"state" json:"state" validate:"required"`
-	Zipcode     string   `db:"zipcode" json:"zipcode" validate:"required,len=5"`
-	DonateURL   string   `db:"donate_url" json:"donate_url" validate:"omitempty,url"`
-	Location    string   `db:"location" json:"-"`
-	HasGiftCard bool     `db:"giftcard" json:"giftcard"`
-	IsActive    bool     `db:"is_active" json:"active"`
-	LatLng      GeoPoint `json:"latlng"`
+	Name        string         `db:"name" json:"name" validate:"required"`
+	Type        string         `db:"type" json:"type" validate:"required"`
+	Tags        RestaurantTags `db:"tags" json:"tags"`
+	Phone       string         `db:"phone" json:"phone" validate:"required,max=14"`
+	Details     string         `db:"details" json:"details"`
+	Hours       string         `db:"hours" json:"hours"`
+	Email       string         `db:"email" json:"email" validate:"required,email"`
+	URL         string         `db:"url" json:"url" validate:"omitempty,url"`
+	Address     string         `db:"address" json:"address" validate:"required"`
+	Address2    string         `db:"address2" json:"address_2"`
+	City        string         `db:"city" json:"city" validate:"required"`
+	State       string         `db:"state" json:"state" validate:"required"`
+	Zipcode     string         `db:"zipcode" json:"zipcode" validate:"required,len=5"`
+	DonateURL   string         `db:"donate_url" json:"donate_url" validate:"omitempty,url"`
+	Location    string         `db:"location" json:"-"`
+	HasGiftCard bool           `db:"giftcard" json:"giftcard"`
+	IsActive    bool           `db:"is_active" json:"active"`
+	LatLng      GeoPoint       `json:"latlng"`
 	CommonModelTimestamps
 }
 

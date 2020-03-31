@@ -160,6 +160,7 @@ func (c *Controller) create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		eventID := sentry.CaptureException(err)
 		http.Error(w, fmt.Sprintf("There was a saving your entry: ID: %v", eventID), http.StatusInternalServerError)
+		return
 	}
 
 	restIDStr := strconv.Itoa(int(*restID))
