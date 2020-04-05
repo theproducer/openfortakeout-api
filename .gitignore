@@ -7,3 +7,5 @@ firebase_privatekey.json
 .idea/tasks.xml
 .DS_Store
 /build
+/dist
+/coverage

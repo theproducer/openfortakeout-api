@@ -2,11 +2,14 @@ import * as dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import Knex from 'knex';
+import * as database from '../knexfile';
 
 import { errorHandler } from './middleware/error.middleware';
 import { notFoundHandler } from './middleware/notFound.middleware';
 
 import BusinessController from './businesses/business';
+import BusinessService from './businesses/business.services';
 
 type ModuleId = string | number;
 
@@ -24,25 +27,32 @@ declare const module: WebpackHotModule;
 
 dotenv.config();
 
-const port: number = parseInt(process.env.PORT as string, 10);
+const db = Knex(database);
 
-const app = express();
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
+(async () => {
+    await db.migrate.latest();
+    const port: number = parseInt(process.env.PORT as string, 10);
 
-// Mount controllers here
+    const app = express();
+    app.use(helmet());
+    app.use(cors());
+    app.use(express.json());
 
-app.use(errorHandler);
-app.use(notFoundHandler);
+    // Mount controllers here
+    const businessService = new BusinessService(db);
+    BusinessController(app, businessService);
 
-const server = app.listen(port, () => {
-    console.log(`Listening on port ${port}`);
-});
+    app.use(errorHandler);
+    app.use(notFoundHandler);
 
-if (process.env.APP_ENV !== 'production') {
-    if (module.hot) {
-        module.hot.accept();
-        module.hot.dispose(() => server.close());
+    const server = app.listen(port, () => {
+        console.log(`Listening on port ${port}`);
+    });
+
+    if (process.env.APP_ENV !== 'production') {
+        if (module.hot) {
+            module.hot.accept();
+            module.hot.dispose(() => server.close());
+        }
     }
-}
+})();
