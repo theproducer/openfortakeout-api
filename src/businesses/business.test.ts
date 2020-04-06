@@ -231,7 +231,7 @@ class MockBusinessService implements IBusinessServices {
             resolve(1);
         });
     }
-    updateBusiness(business: Business): void {
+    updateBusiness(business: Business): Promise<void> {
         throw new Error('Method not implemented.');
     }
     getBusiness(id: number): Promise<Business | null> {

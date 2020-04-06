@@ -1,4 +1,5 @@
 import express, { Request, Response, Express, NextFunction } from 'express';
+import * as _ from 'lodash';
 import validatejs from 'validate.js';
 import HttpException from '../common/http-exception';
 
@@ -35,7 +36,25 @@ export default function BusinessController(app: Express, service: IBusinessServi
             };
 
             const businesses = await service.getBusinesses(coordinate);
-            res.status(200).send(businesses);
+            let alltags: string[] = [];
+            businesses.forEach((business) => {
+                const tags = business.tags;
+                if (tags && tags.length > 0) {
+                    for (let i = 0; i < tags.length; i++) {
+                        const tag = tags[i];
+                        if (tag) {
+                            alltags.push(tag.toLowerCase());
+                        }
+                    }
+                }
+            });
+
+            alltags = _.uniq(alltags);
+
+            res.status(200).send({
+                businesses: businesses,
+                tags: alltags,
+            });
         } catch (err) {
             next(new HttpException(500, err, err));
         }
@@ -44,7 +63,7 @@ export default function BusinessController(app: Express, service: IBusinessServi
     async function getBusiness(req: Request, res: Response, next: NextFunction) {
         const entryId = parseInt(req.params.id, 10);
         console.log(entryId);
-        const business = await service.getBusiness(entryId);
+        const business = await service.getBusiness(entryId, false);
 
         if (!business) {
             res.sendStatus(404);
@@ -58,6 +77,7 @@ export default function BusinessController(app: Express, service: IBusinessServi
         const validationErrors = validatejs(newBusiness, BusinessValidator);
 
         if (validationErrors !== undefined) {
+            console.log(validationErrors);
             next(new HttpException(400, 'submision is invalid'));
             return;
         }

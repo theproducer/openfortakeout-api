@@ -1,4 +1,8 @@
-import { Coordinate } from '../businesses/business.interface';
+import { Coordinate, Business } from '../businesses/business.interface';
+
+export interface IAdminServices {
+    approveBusiness(id: number): Promise<Business>;
+}
 
 export interface GeocodioResults {
     results: GeocodioResult[];
@@ -14,3 +18,5 @@ export interface Zipcode {
     lat: number;
     lng: number;
 }
+
+// https://api.wereopenfortakeout.com/slackadmin/webhook/

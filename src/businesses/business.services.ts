@@ -1,6 +1,7 @@
 import Knex from 'knex';
 import axios from 'axios';
 import KnexPostgis from 'knex-postgis';
+import { IncomingWebhook, IncomingWebhookSendArguments } from '@slack/webhook';
 import { IBusinessServices, Business, Coordinate } from './business.interface';
 import { GeocodioResults, Zipcode } from '../admin/admin.interface';
 
@@ -9,10 +10,12 @@ const st = KnexPostgis;
 export default class BusinessServices implements IBusinessServices {
     private db: Knex<any, unknown[]>;
     private st: KnexPostgis.KnexPostgis;
+    private webhook: IncomingWebhook;
 
     constructor(db: Knex<any, unknown[]>) {
         this.db = db;
         this.st = KnexPostgis(this.db);
+        this.webhook = new IncomingWebhook(process.env.SLACK_WEBHOOK_URL as string);
     }
 
     addBusiness(business: Business): Promise<number> {
@@ -44,6 +47,8 @@ export default class BusinessServices implements IBusinessServices {
                 })
                 .returning('id')
                 .then((results) => {
+                    business.id = results[0];
+                    this.slackBusinessMessage(business, 'submitted');
                     resolve(parseInt(results[0], 10));
                 })
                 .catch((err) => {
@@ -72,6 +77,9 @@ export default class BusinessServices implements IBusinessServices {
                     updated_at: new Date(),
                     deleted_at: business.deleted_at,
                 })
+                .where({
+                    id: business.id,
+                })
                 .then(() => {
                     resolve();
                 })
@@ -80,14 +88,20 @@ export default class BusinessServices implements IBusinessServices {
                 });
         });
     }
-    getBusiness(id: number): Promise<Business | null> {
+    getBusiness(id: number, returnInactive: boolean = false): Promise<Business | null> {
         return new Promise<Business>((resolve, reject) => {
-            this.db('businesses')
-                .select('*', this.st.asText('location'))
-                .where({
+            const query = this.db('businesses').select('*', this.st.asText('location'));
+            if (returnInactive) {
+                query.where({
+                    id: id,
+                });
+            } else {
+                query.where({
                     id: id,
                     active: true,
-                })
+                });
+            }
+            query
                 .then((results) => {
                     const business = results[0] as Business;
                     if (business) {
@@ -197,5 +211,81 @@ export default class BusinessServices implements IBusinessServices {
             lat: parseFloat(values[1]),
             lng: parseFloat(values[0]),
         };
+    }
+    slackBusinessMessage(business: Business, operation: string): void {
+        const isGeoLocated = business.location ? true : false;
+        if (process.env.APP_ENV !== 'production') {
+            business.name = '**THIS IS A TEST** ' + business.name;
+        }
+        const options: IncomingWebhookSendArguments = {
+            blocks: [
+                {
+                    type: 'section',
+                    text: {
+                        type: 'mrkdwn',
+                        text: `A new business has been ${operation}:\n*${business.name}*\n${business.address} ${
+                            business.address2
+                        }\n${business.city}, ${business.state} ${business.zipcode}\n(${
+                            isGeoLocated ? 'Is Geolocated' : 'Is NOT Geolocated'
+                        })\n\nEmail: ${business.email} - Phone: ${business.phone}\nURL: ${business.url}`,
+                    },
+                },
+                {
+                    type: 'section',
+                    fields: [
+                        {
+                            type: 'mrkdwn',
+                            text: `*Type:*\n${business.type} (${business.tags.join(', ')})`,
+                        },
+                        {
+                            type: 'mrkdwn',
+                            text: `*Hours:*\n${business.hours}`,
+                        },
+                        {
+                            type: 'mrkdwn',
+                            text: `*Offers Giftcard:*\n${business.giftcard ? 'Yes' : 'No'}`,
+                        },
+                        {
+                            type: 'mrkdwn',
+                            text: `*Offers Takeout:*\n${business.takeout ? 'Yes' : 'No'}`,
+                        },
+                        {
+                            type: 'mrkdwn',
+                            text: `*Offers Delivery:*\n${business.delivery ? 'Yes' : 'No'}`,
+                        },
+                        {
+                            type: 'mrkdwn',
+                            text: `*Is Closed:*\n${business.closed ? 'Yes' : 'No'}`,
+                        },
+                    ],
+                },
+                {
+                    type: 'divider',
+                },
+                {
+                    type: 'section',
+                    text: {
+                        type: 'mrkdwn',
+                        text: business.details,
+                    },
+                },
+                {
+                    type: 'actions',
+                    elements: [
+                        {
+                            type: 'button',
+                            style: 'primary',
+                            action_id: 'admin_approve_submission',
+                            value: business.id?.toString(),
+                            text: {
+                                type: 'plain_text',
+                                text: 'Approve',
+                            },
+                        },
+                    ],
+                },
+            ],
+        };
+        this.webhook.send(options);
     }
 }

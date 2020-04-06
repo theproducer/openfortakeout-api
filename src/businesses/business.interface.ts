@@ -1,9 +1,16 @@
 import validatejs from 'validate.js';
 
+validatejs.validators.urlAllowBlank = function (value: any, options: any, attribute: any, attributes: any) {
+    if (validatejs.isEmpty(value)) {
+        return;
+    }
+    return validatejs.validators.url(value, options, attribute, attributes);
+};
+
 export interface IBusinessServices {
     addBusiness(business: Business): Promise<number>;
     updateBusiness(business: Business): Promise<void>;
-    getBusiness(id: number): Promise<Business | null>;
+    getBusiness(id: number, returnInactive: boolean): Promise<Business | null>;
     getBusinesses(coords: Coordinate): Promise<Business[]>;
     geocodeAddress(street: string, city: string, state: string, zipcode: string): Promise<Coordinate>;
     geocodeZipcode(zipcode: string): Promise<Coordinate>;
@@ -63,7 +70,7 @@ export const BusinessValidator = {
         presence: true,
         length: { is: 5 },
     },
-    donateurl: { url: true },
+    donateurl: { urlAllowBlank: true, presence: { allowEmpty: true } },
     giftcard: { type: 'boolean' },
     takeout: { type: 'boolean' },
     delivery: { type: 'boolean' },
