@@ -13,6 +13,7 @@ const database = {
     },
     migrations: {
         tableName: 'knex_migrations',
+        directory: process.env.MIGRATIONS,
     },
 } as knex.Config;
 

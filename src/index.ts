@@ -6,7 +6,7 @@ import Knex from 'knex';
 import * as Sentry from '@sentry/node';
 import * as winston from 'winston';
 import * as expressWinston from 'express-winston';
-import * as database from '../knexfile';
+import * as database from './knexfile';
 
 import { errorHandler } from './middleware/error.middleware';
 import { notFoundHandler } from './middleware/notFound.middleware';
@@ -32,8 +32,10 @@ interface WebpackHotModule {
 }
 
 declare const module: WebpackHotModule;
+if (process.env.NODE_ENV === 'development') {
+    dotenv.config();
+}
 
-dotenv.config();
 Sentry.init({ dsn: process.env.SENTRY_DSN });
 
 const db = Knex(database);
@@ -74,11 +76,4 @@ const adminService = new AdminService(db);
     const server = app.listen(port, () => {
         console.log(`Listening on port ${port}`);
     });
-
-    if (process.env.APP_ENV !== 'production') {
-        if (module.hot) {
-            module.hot.accept();
-            module.hot.dispose(() => server.close());
-        }
-    }
 })();

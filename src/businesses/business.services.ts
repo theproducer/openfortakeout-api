@@ -214,7 +214,7 @@ export default class BusinessServices implements IBusinessServices {
     }
     slackBusinessMessage(business: Business, operation: string): void {
         const isGeoLocated = business.location ? true : false;
-        if (process.env.APP_ENV !== 'production') {
+        if (process.env.NODE_ENV !== 'production') {
             business.name = '**THIS IS A TEST** ' + business.name;
         }
         const options: IncomingWebhookSendArguments = {

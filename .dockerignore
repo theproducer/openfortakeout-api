@@ -1,0 +1,7 @@
+.env
+.git
+.gitignore
+ngrok
+node_modules
+yarn.lock
+yarn-error.log
