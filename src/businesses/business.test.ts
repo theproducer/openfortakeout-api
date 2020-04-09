@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import supertest from 'supertest';
-import { IBusinessServices, Business, Coordinate } from './business.interface';
+import { IBusinessServices, Business, Coordinate, Correction } from './business.interface';
 import BusinessController from './business';
 import { errorHandler } from '../middleware/error.middleware';
 
@@ -106,7 +106,9 @@ test('/businesses get all businesses within lat/lng radius', async (done) => {
 
     const res = await request.get('/businesses?lat=50.00&lng=50.00');
     expect(res.status).toBe(200);
-    expect(res.body.length).toBe(20);
+
+    expect(res.body.businesses.length).toBe(20);
+    expect(res.body.tags.length).toBe(2);
     done();
 });
 
@@ -123,7 +125,8 @@ test('/businesses get all businesses within zipcode radius', async (done) => {
 
     const res = await request.get('/businesses?zipcode=49684');
     expect(res.status).toBe(200);
-    expect(res.body.length).toBe(20);
+    expect(res.body.businesses.length).toBe(20);
+    expect(res.body.tags.length).toBe(2);
     done();
 });
 
@@ -210,6 +213,15 @@ const exampleBusiness: Business = {
 };
 
 class MockBusinessService implements IBusinessServices {
+    getCorrection(id: number): Promise<Correction | null> {
+        throw new Error('Method not implemented.');
+    }
+    addCorrection(correction: Correction): Promise<number> {
+        throw new Error('Method not implemented.');
+    }
+    updateCorrection(correction: Correction): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
     geocodeAddress(street: string, city: string, state: string, zipcode: string): Promise<Coordinate> {
         return new Promise<Coordinate>((resolve, reject) => {
             resolve({

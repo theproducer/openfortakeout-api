@@ -66,6 +66,10 @@ const adminService = new AdminService(db);
     );
 
     // Mount controllers here
+    app.get('/', (req, res) => {
+        res.status(200).send("We'ere Open for Takeout API Up");
+    });
+
     BusinessController(app, businessService);
     AdminController(app, adminService);
 

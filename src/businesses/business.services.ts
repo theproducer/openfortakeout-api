@@ -1,8 +1,9 @@
 import Knex from 'knex';
 import axios from 'axios';
 import KnexPostgis from 'knex-postgis';
+import * as _ from 'lodash';
 import { IncomingWebhook, IncomingWebhookSendArguments } from '@slack/webhook';
-import { IBusinessServices, Business, Coordinate } from './business.interface';
+import { IBusinessServices, Business, Coordinate, Correction } from './business.interface';
 import { GeocodioResults, Zipcode } from '../admin/admin.interface';
 
 const st = KnexPostgis;
@@ -16,6 +17,91 @@ export default class BusinessServices implements IBusinessServices {
         this.db = db;
         this.st = KnexPostgis(this.db);
         this.webhook = new IncomingWebhook(process.env.SLACK_WEBHOOK_URL as string);
+    }
+    getCorrection(id: number): Promise<Correction | null> {
+        return new Promise<Correction>((resolve, reject) => {
+            this.db('corrections')
+                .where({
+                    id: id,
+                    approved: false,
+                    deleted_at: null,
+                })
+                .then((results) => {
+                    const correction = results[0] as Correction;
+                    if (correction) {
+                        resolve(correction);
+                    } else {
+                        resolve(undefined);
+                    }
+                })
+                .catch((err) => {
+                    reject(err);
+                });
+        });
+    }
+
+    addCorrection(correction: Correction, business: Business): Promise<number> {
+        return new Promise<number>((resolve, reject) => {
+            this.db('corrections')
+                .insert({
+                    business_id: correction.business_id,
+                    type: correction.type,
+                    tags: correction.tags,
+                    phone: correction.phone,
+                    details: correction.details,
+                    hours: correction.hours,
+                    url: correction.url,
+                    donateurl: correction.donateurl,
+                    giftcard: correction.giftcard,
+                    takeout: correction.takeout,
+                    delivery: correction.delivery,
+                    closed: correction.closed,
+                    approved: false,
+                    notes: correction.notes,
+                    created_at: new Date(),
+                    updated_at: new Date(),
+                })
+                .returning('id')
+                .then((results) => {
+                    correction.id = results[0];
+                    this.slackBusinessMessage(business, 'corrected', correction);
+                    resolve(parseInt(results[0], 10));
+                })
+                .catch((err) => {
+                    reject(err);
+                });
+        });
+    }
+    updateCorrection(correction: Correction): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            this.db('corrections')
+                .update({
+                    type: correction.type,
+                    tags: correction.tags,
+                    phone: correction.phone,
+                    details: correction.details,
+                    hours: correction.hours,
+                    url: correction.url,
+                    donateurl: correction.donateurl,
+                    giftcard: correction.giftcard,
+                    takeout: correction.takeout,
+                    delivery: correction.delivery,
+                    closed: correction.closed,
+                    approved: correction.approved,
+                    notes: correction.notes,
+                    deleted_at: correction.deleted_at,
+                    updated_at: new Date(),
+                })
+                .where({
+                    id: correction.id,
+                })
+                .then(() => {
+                    resolve();
+                })
+                .catch((err) => {
+                    reject(err);
+                });
+        });
     }
 
     addBusiness(business: Business): Promise<number> {
@@ -48,7 +134,7 @@ export default class BusinessServices implements IBusinessServices {
                 .returning('id')
                 .then((results) => {
                     business.id = results[0];
-                    this.slackBusinessMessage(business, 'submitted');
+                    this.slackBusinessMessage(business, 'submitted', null);
                     resolve(parseInt(results[0], 10));
                 })
                 .catch((err) => {
@@ -212,20 +298,99 @@ export default class BusinessServices implements IBusinessServices {
             lng: parseFloat(values[0]),
         };
     }
-    slackBusinessMessage(business: Business, operation: string): void {
+
+    slackBusinessMessage(business: Business, operation: string, correction?: Correction | null): void {
         const isGeoLocated = business.location ? true : false;
         if (process.env.NODE_ENV !== 'production') {
             business.name = '**THIS IS A TEST** ' + business.name;
         }
+
+        if (business.giftcard === undefined || business.giftcard === null) {
+            business.giftcard = false;
+        }
+
+        if (business.takeout === undefined || business.takeout === null) {
+            business.takeout = false;
+        }
+
+        if (business.delivery === undefined || business.delivery === null) {
+            business.delivery = false;
+        }
+
+        if (business.closed === undefined || business.closed === null) {
+            business.closed = false;
+        }
+
+        let hasGiftcard = business.giftcard ? 'Yes' : 'No';
+        let hasTakeout = business.takeout ? 'Yes' : 'No';
+        let hasDelivery = business.delivery ? 'Yes' : 'No';
+        let isClosed = business.closed ? 'Yes' : 'No';
+
+        if (operation === 'corrected' && correction) {
+            if (business.type !== correction.type) {
+                business.type = `~${business.type}~ ${correction.type}`;
+            }
+
+            const original_tags = business.tags ? business.tags.join(',').toLowerCase() : '';
+            const new_tags = correction.tags ? correction.tags.join(',').toLowerCase() : '';
+            if (original_tags !== new_tags) {
+                if (business.tags) {
+                    business.tags = business.tags.map((oldtag) => {
+                        return `~${oldtag}~`;
+                    });
+                } else {
+                    business.tags = [];
+                }
+
+                business.tags = _.concat(business.tags, correction.tags);
+            }
+
+            if (business.phone !== correction.phone) {
+                business.phone = `~${business.phone}~ ${correction.phone}`;
+            }
+
+            if (business.details !== correction.details) {
+                business.details = `~${business.details}~ ${correction.details}`;
+            }
+
+            if (business.hours !== correction.hours) {
+                business.hours = `~${business.hours}~ ${correction.hours}`;
+            }
+
+            if (business.url !== correction.url) {
+                business.url = `~${business.url}~ ${correction.url}`;
+            }
+
+            if (business.donateurl !== correction.donateurl) {
+                business.donateurl = `~${business.donateurl}~ ${correction.donateurl}`;
+            }
+
+            if (business.giftcard !== correction.giftcard) {
+                hasGiftcard = `~${hasGiftcard}~ ${correction.giftcard ? 'Yes' : 'No'}`;
+            }
+
+            if (business.takeout !== correction.takeout) {
+                hasTakeout = `~${hasTakeout}~ ${correction.takeout ? 'Yes' : 'No'}`;
+            }
+
+            if (business.delivery !== correction.delivery) {
+                hasDelivery = `~${hasDelivery}~ ${correction.delivery ? 'Yes' : 'No'}`;
+            }
+
+            if (business.closed !== correction.closed) {
+                isClosed = `~${isClosed}~ ${correction.closed ? 'Yes' : 'No'}`;
+            }
+        }
+
         const options: IncomingWebhookSendArguments = {
             blocks: [
                 {
                     type: 'section',
                     text: {
                         type: 'mrkdwn',
-                        text: `A new business has been ${operation}:\n*${business.name}*\n${business.address} ${
-                            business.address2
-                        }\n${business.city}, ${business.state} ${business.zipcode}\n(${
+                        text: `A new business has been ${operation.toUpperCase()}:\n*${business.name}*\n${
+                            business.address
+                        } ${business.address2}\n${business.city}, ${business.state} ${business.zipcode}\n(${
                             isGeoLocated ? 'Is Geolocated' : 'Is NOT Geolocated'
                         })\n\nEmail: ${business.email} - Phone: ${business.phone}\nURL: ${business.url}`,
                     },
@@ -235,7 +400,7 @@ export default class BusinessServices implements IBusinessServices {
                     fields: [
                         {
                             type: 'mrkdwn',
-                            text: `*Type:*\n${business.type} (${business.tags.join(', ')})`,
+                            text: `*Type:*\n${business.type} (${business.tags ? business.tags.join(', ') : ''})`,
                         },
                         {
                             type: 'mrkdwn',
@@ -243,19 +408,19 @@ export default class BusinessServices implements IBusinessServices {
                         },
                         {
                             type: 'mrkdwn',
-                            text: `*Offers Giftcard:*\n${business.giftcard ? 'Yes' : 'No'}`,
+                            text: `*Offers Giftcard:*\n${hasGiftcard}`,
                         },
                         {
                             type: 'mrkdwn',
-                            text: `*Offers Takeout:*\n${business.takeout ? 'Yes' : 'No'}`,
+                            text: `*Offers Takeout:*\n${hasTakeout}`,
                         },
                         {
                             type: 'mrkdwn',
-                            text: `*Offers Delivery:*\n${business.delivery ? 'Yes' : 'No'}`,
+                            text: `*Offers Delivery:*\n${hasDelivery}`,
                         },
                         {
                             type: 'mrkdwn',
-                            text: `*Is Closed:*\n${business.closed ? 'Yes' : 'No'}`,
+                            text: `*Is Closed:*\n${isClosed}`,
                         },
                     ],
                 },
@@ -269,23 +434,41 @@ export default class BusinessServices implements IBusinessServices {
                         text: business.details,
                     },
                 },
-                {
-                    type: 'actions',
-                    elements: [
-                        {
-                            type: 'button',
-                            style: 'primary',
-                            action_id: 'admin_approve_submission',
-                            value: business.id?.toString(),
-                            text: {
-                                type: 'plain_text',
-                                text: 'Approve',
-                            },
-                        },
-                    ],
-                },
             ],
         };
+
+        let action_id = 'admin_approve_submission';
+        let action_value = business.id?.toString();
+
+        if (operation === 'corrected' && correction) {
+            options.blocks?.push({
+                type: 'section',
+                text: {
+                    type: 'mrkdwn',
+                    text: `*Submission Notes*\n ${correction.notes}`,
+                },
+            });
+
+            action_id = 'admin_approve_correction';
+            action_value = correction.id?.toString();
+        }
+
+        options.blocks?.push({
+            type: 'actions',
+            elements: [
+                {
+                    type: 'button',
+                    style: 'primary',
+                    action_id: action_id,
+                    value: action_value,
+                    text: {
+                        type: 'plain_text',
+                        text: 'Approve',
+                    },
+                },
+            ],
+        });
+
         this.webhook.send(options);
     }
 }

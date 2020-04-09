@@ -3,7 +3,7 @@ import * as _ from 'lodash';
 import validatejs from 'validate.js';
 import HttpException from '../common/http-exception';
 
-import { IBusinessServices, Business, BusinessValidator, Coordinate } from './business.interface';
+import { IBusinessServices, Business, BusinessValidator, Coordinate, Correction } from './business.interface';
 
 export default function BusinessController(app: Express, service: IBusinessServices) {
     const router = express.Router();
@@ -12,12 +12,20 @@ export default function BusinessController(app: Express, service: IBusinessServi
     router.get('/', getBusinesses);
     router.post('/', addBusiness);
     router.get('/:id', getBusiness);
+    router.post('/:id/correction', addCorrection);
 
     async function getBusinesses(req: Request, res: Response, next: NextFunction) {
         try {
-            let lat = parseFloat(req.query.lat || 0.0);
-            let lng = parseFloat(req.query.lng || 0.0);
-            const zipcode = req.query.zipcode || '';
+            let lat = parseFloat(req.query.lat as string);
+            let lng = parseFloat(req.query.lng as string);
+            if (isNaN(lat)) {
+                lat = 0.0;
+            }
+
+            if (isNaN(lng)) {
+                lng = 0.0;
+            }
+            const zipcode = req.query.zipcode as string;
 
             if (lat === 0.0 && lng === 0.0) {
                 if (zipcode === '') {
@@ -62,7 +70,6 @@ export default function BusinessController(app: Express, service: IBusinessServi
 
     async function getBusiness(req: Request, res: Response, next: NextFunction) {
         const entryId = parseInt(req.params.id, 10);
-        console.log(entryId);
         const business = await service.getBusiness(entryId, false);
 
         if (!business) {
@@ -96,6 +103,30 @@ export default function BusinessController(app: Express, service: IBusinessServi
             res.sendStatus(201);
         } catch (err) {
             next(new HttpException(500, 'could not write business to db', err));
+        }
+    }
+
+    async function addCorrection(req: Request, res: Response, next: NextFunction) {
+        const entryId = parseInt(req.params.id, 10);
+        const business = await service.getBusiness(entryId, false);
+
+        if (!business) {
+            res.sendStatus(404);
+        } else {
+            const newCorrection = req.body as Correction;
+            newCorrection.business_id = business.id as number;
+
+            if (!newCorrection.business_id) {
+                next(new HttpException(400, 'correction must have an associated business'));
+                return;
+            }
+
+            try {
+                const entryId = await service.addCorrection(newCorrection, business);
+                res.sendStatus(201);
+            } catch (err) {
+                next(new HttpException(500, 'could not write correction to db', err));
+            }
         }
     }
 }

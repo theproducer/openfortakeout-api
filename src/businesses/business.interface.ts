@@ -9,6 +9,9 @@ validatejs.validators.urlAllowBlank = function (value: any, options: any, attrib
 
 export interface IBusinessServices {
     addBusiness(business: Business): Promise<number>;
+    addCorrection(correction: Correction, business: Business): Promise<number>;
+    updateCorrection(correction: Correction): Promise<void>;
+    getCorrection(id: number): Promise<Correction | null>;
     updateBusiness(business: Business): Promise<void>;
     getBusiness(id: number, returnInactive: boolean): Promise<Business | null>;
     getBusinesses(coords: Coordinate): Promise<Business[]>;
@@ -43,6 +46,27 @@ export interface Business {
     delivery: boolean;
     closed: boolean;
     active: boolean;
+    created_at: Date;
+    updated_at: Date;
+    deleted_at?: Date;
+}
+
+export interface Correction {
+    id?: number;
+    business_id: number;
+    type: string;
+    tags: string[];
+    phone: string;
+    details: string;
+    hours: string;
+    url: string;
+    donateurl: string;
+    giftcard: boolean;
+    takeout: boolean;
+    delivery: boolean;
+    closed: boolean;
+    approved: boolean;
+    notes: string;
     created_at: Date;
     updated_at: Date;
     deleted_at?: Date;
