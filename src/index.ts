@@ -71,7 +71,7 @@ const adminService = new AdminService(db);
     });
 
     BusinessController(app, businessService);
-    AdminController(app, adminService);
+    AdminController(app, adminService, businessService);
 
     app.use(Sentry.Handlers.errorHandler());
     app.use(errorHandler);

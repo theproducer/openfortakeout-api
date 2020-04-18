@@ -19,15 +19,14 @@ export default function BusinessController(app: Express, service: IBusinessServi
             let lat = parseFloat(req.query.lat as string);
             let lng = parseFloat(req.query.lng as string);
             if (isNaN(lat)) {
-                lat = 0.0;
+                lat = 0;
             }
 
             if (isNaN(lng)) {
-                lng = 0.0;
+                lng = 0;
             }
-            const zipcode = req.query.zipcode as string;
-
-            if (lat === 0.0 && lng === 0.0) {
+            const zipcode = (req.query.zipcode as string) || '';
+            if (lat === 0 && lng === 0) {
                 if (zipcode === '') {
                     next(new HttpException(400, 'invalid lat/lng and zipcode'));
                     return;

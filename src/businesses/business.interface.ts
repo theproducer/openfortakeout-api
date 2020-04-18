@@ -79,7 +79,7 @@ export const BusinessValidator = {
         presence: true,
         length: {
             minimum: 10,
-            maximum: 14,
+            maximum: 60,
         },
     },
     email: {

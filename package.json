@@ -6,6 +6,7 @@
     "license": "MIT",
     "private": true,
     "scripts": {
+        "create-migration": "knex --migrations-directory=./src/migrations migrate:make ",
         "dev": "NODE_ENV=development nodemon dist/index",
         "devbuild": "NODE_ENV=development tsc -w",
         "test": "jest",
@@ -21,6 +22,7 @@
         "dotenv": "^8.2.0",
         "express": "^4.17.1",
         "express-winston": "^4.0.3",
+        "firebase-admin": "^8.10.0",
         "helmet": "^3.22.0",
         "knex": "^0.20.13",
         "knex-postgis": "^0.11.0",
